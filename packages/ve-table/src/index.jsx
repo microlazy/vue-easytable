@@ -887,7 +887,7 @@ export default {
                         }
                         // direction up
                         else if (shiftKey) {
-                            direction = CELL_SELECTION_DIRECTION.UP;
+                            direction = CELL_SELECTION_DIRECTION.LEFT;
                             this[INSTANCE_METHODS.STOP_EDITING_CELL]();
                         }
                         // stop editing and stay in current cell
@@ -896,7 +896,7 @@ export default {
                         }
                         // direction down
                         else {
-                            direction = CELL_SELECTION_DIRECTION.DOWN;
+                            direction = CELL_SELECTION_DIRECTION.RIGHT;
                             this[INSTANCE_METHODS.STOP_EDITING_CELL]();
                         }
 
@@ -984,15 +984,36 @@ export default {
 
             if (direction === CELL_SELECTION_DIRECTION.LEFT) {
                 if (columnIndex > 0) {
-                    let nextColumn = colgroups[columnIndex - 1];
-                    this.cellSelectionKeyData.colKey = nextColumn.key;
-                    this.columnToVisible(nextColumn);
+                    //let nextColumn = colgroups[columnIndex - 1];
+                    let nextColumn = null;
+                    for (let i = columnIndex; i > 0; i--) {
+                        if (colgroups[i - 1].edit) {
+                            nextColumn = colgroups[i - 1];
+                            break;
+                        }
+                    }
+                    if (nextColumn) {
+                        this.cellSelectionKeyData.colKey = nextColumn.key;
+                        this.columnToVisible(nextColumn);
+                    }
                 }
             } else if (direction === CELL_SELECTION_DIRECTION.RIGHT) {
                 if (columnIndex < colgroups.length - 1) {
-                    let nextColumn = colgroups[columnIndex + 1];
-                    this.cellSelectionKeyData.colKey = nextColumn.key;
-                    this.columnToVisible(nextColumn);
+                    let nextColumn = null;
+                    for (
+                        let i = columnIndex;
+                        columnIndex < colgroups.length - 1;
+                        i++
+                    ) {
+                        if (colgroups[i + 1].edit) {
+                            nextColumn = colgroups[i + 1];
+                            break;
+                        }
+                    }
+                    if (nextColumn) {
+                        this.cellSelectionKeyData.colKey = nextColumn.key;
+                        this.columnToVisible(nextColumn);
+                    }
                 }
             } else if (direction === CELL_SELECTION_DIRECTION.UP) {
                 if (rowIndex > 0) {

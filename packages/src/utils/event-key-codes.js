@@ -10,7 +10,11 @@ export function isInputKeyCode(event) {
     }
 
     // Digit0 to Digit9
-    if ((keyCode >= 48 && keyCode <= 57) || (keyCode >= 96 && keyCode <= 105)) {
+    if (
+        (keyCode >= 48 && keyCode <= 57) ||
+        (keyCode >= 96 && keyCode <= 107) ||
+        (keyCode >= 109 && keyCode <= 111)
+    ) {
         result = true;
     }
     // A to Z
