@@ -1,4 +1,4 @@
-import { cloneDeep, debounce } from "lodash";
+import { cloneDeep, debounce, isNull } from "lodash";
 import {
     initGroupColumns,
     clsName,
@@ -305,7 +305,7 @@ export default {
             },
             /*
             table offest height（开启虚拟滚动时使用）
-            1、当 :max-height="500" 时使用 max-height 
+            1、当 :max-height="500" 时使用 max-height
             2、当 max-height="calc(100vh - 210px)" 或者 max-height="80%" 时使用 tableOffestHeight
             */
             tableOffestHeight: 0,
@@ -313,7 +313,7 @@ export default {
             tableHeight: 0,
             // highlight row key
             highlightRowKey: "",
-            /* 
+            /*
             editing cell
             */
             editingCell: {
@@ -322,7 +322,7 @@ export default {
                 row: null,
                 column: null,
             },
-            /* 
+            /*
             是否允许按下方向键时，停止编辑并移动选中单元格。当双击可编辑单元格或者点击输入文本框时设置为false值
 
             像excel一样：如果直接在可编辑单元格上输入内容后，按下上、下、左、右按键可以直接选中其他单元格，并停止当前单元格编辑状态
@@ -412,7 +412,7 @@ export default {
                     );
                 }
             } else {
-                /* 
+                /*
                 fixed:虚拟滚动表格行展开的 ve-table 存在固定头时（sticky 冲突），表格样式错乱的问题
                 fixed:When there is a fixed header in the ve-table expanded by the row of the virtual rolling table(header sticky conflict),Incorrect table presentation
                 */
@@ -981,38 +981,28 @@ export default {
 
             let columnIndex = colgroups.findIndex((x) => x.key === colKey);
             let rowIndex = allRowKeys.indexOf(rowKey);
-
             if (direction === CELL_SELECTION_DIRECTION.LEFT) {
-                if (columnIndex > 0) {
-                    //let nextColumn = colgroups[columnIndex - 1];
-                    let nextColumn = null;
-                    for (let i = columnIndex; i > 0; i--) {
-                        if (colgroups[i - 1].edit) {
-                            nextColumn = colgroups[i - 1];
-                            break;
-                        }
-                    }
-                    if (nextColumn) {
-                        this.cellSelectionKeyData.colKey = nextColumn.key;
-                        this.columnToVisible(nextColumn);
+                let next = this.selectPrevColumn(columnIndex, rowIndex);
+                if (!isNull(next.column) && !isNull(next.row)) {
+                    this.cellSelectionKeyData.colKey = next.column.key;
+                    this.columnToVisible(next.column);
+                    if (next.row < rowIndex) {
+                        this.rowToVisible(
+                            KEY_CODES.ARROW_UP,
+                            allRowKeys[next.row],
+                        );
                     }
                 }
             } else if (direction === CELL_SELECTION_DIRECTION.RIGHT) {
-                if (columnIndex < colgroups.length - 1) {
-                    let nextColumn = null;
-                    for (
-                        let i = columnIndex;
-                        columnIndex < colgroups.length - 1;
-                        i++
-                    ) {
-                        if (colgroups[i + 1].edit) {
-                            nextColumn = colgroups[i + 1];
-                            break;
-                        }
-                    }
-                    if (nextColumn) {
-                        this.cellSelectionKeyData.colKey = nextColumn.key;
-                        this.columnToVisible(nextColumn);
+                let next = this.selectNextColumn(columnIndex, rowIndex);
+                if (!isNull(next.column) && !isNull(next.row)) {
+                    this.cellSelectionKeyData.colKey = next.column.key;
+                    this.columnToVisible(next.column);
+                    if (next.row > rowIndex) {
+                        this.rowToVisible(
+                            KEY_CODES.ARROW_DOWN,
+                            allRowKeys[next.row],
+                        );
                     }
                 }
             } else if (direction === CELL_SELECTION_DIRECTION.UP) {
@@ -1027,7 +1017,56 @@ export default {
                 }
             }
         },
-
+        // 获取上一个可编辑列
+        selectPrevColumn(colIndex, rowIndex) {
+            const { colgroups } = this;
+            const colLen = colgroups.length;
+            const colLoop = colIndex - colLen;
+            let nextColumn = null;
+            let i = colIndex;
+            for (; i > colLoop; i--) {
+                let index = (i < 1 ? colLen + i : i) - 1;
+                if (colgroups[index] && colgroups[index].edit) {
+                    nextColumn = colgroups[index];
+                    break;
+                }
+            }
+            // 判断是否新起一条
+            if (i < 1) {
+                if (rowIndex > 0) {
+                    rowIndex = rowIndex - 1;
+                } else {
+                    rowIndex = null;
+                    nextColumn = null;
+                }
+            }
+            return { column: nextColumn, row: rowIndex };
+        },
+        // 获取下一个可编辑列
+        selectNextColumn(colIndex, rowIndex) {
+            const { colgroups, allRowKeys } = this;
+            const colLen = colgroups.length;
+            const colLoop = colIndex + colLen;
+            let nextColumn = null;
+            let i = colIndex;
+            for (; i < colLoop - 1; i++) {
+                let index = i >= colLen ? i + 1 - colLen : i + 1;
+                if (colgroups[index] && colgroups[index].edit) {
+                    nextColumn = colgroups[index];
+                    break;
+                }
+            }
+            // 判断是否新起一条
+            if (i >= colLen) {
+                if (rowIndex + 1 < allRowKeys.length) {
+                    rowIndex = rowIndex + 1;
+                } else {
+                    rowIndex = null;
+                    nextColumn = null;
+                }
+            }
+            return { column: nextColumn, row: rowIndex };
+        },
         /*
          * @columnToVisible
          * @desc  column to visible
@@ -1992,7 +2031,7 @@ export default {
                 (x) => x[rowKeyFieldName] === rowKey,
             );
 
-            /* 
+            /*
             调用API编辑的情况，需要关闭之前编辑的单元格
             */
             if (
